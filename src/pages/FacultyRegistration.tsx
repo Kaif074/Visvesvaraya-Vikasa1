@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabaseHelpers } from "@/integrations/supabase/client";
-import { Users, BookOpen, CheckCircle } from "lucide-react";
+import { Users, BookOpen, CircleCheck as CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const FacultyRegistration = () => {

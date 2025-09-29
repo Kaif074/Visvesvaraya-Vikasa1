@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabaseHelpers } from "@/integrations/supabase/client";
-import { UserPlus, GraduationCap, CheckCircle } from "lucide-react";
+import { UserPlus, GraduationCap, CircleCheck as CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const StudentRegistration = () => {

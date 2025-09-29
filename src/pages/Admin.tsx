@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Users, GraduationCap, Download, BarChart3, Calendar } from "lucide-react";
+import { Shield, Users, GraduationCap, Download, ChartBar as BarChart3, Calendar } from "lucide-react";
 
 const Admin = () => {
   const [studentRegistrations, setStudentRegistrations] = useState([]);
