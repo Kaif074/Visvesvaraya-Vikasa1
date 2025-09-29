@@ -2,25 +2,113 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Shield, Users, GraduationCap, Download, BarChart3, Calendar } from "lucide-react";
 
-// Mock data for demonstration
-const studentRegistrations = [
-  { id: 1, usn: "1AB21CS001", name: "Arjun Sharma", college: "ABC Engineering", branch: "CSE", email: "arjun@example.com" },
-  { id: 2, usn: "1AB21EC002", name: "Priya Patel", college: "XYZ Technical", branch: "ECE", email: "priya@example.com" },
-  { id: 3, usn: "1AB21ME003", name: "Rajesh Kumar", college: "DEF Institute", branch: "ME", email: "rajesh@example.com" },
-];
-
-const facultyRegistrations = [
-  { id: 1, employeeId: "FAC001", name: "Dr. Suresh Gupta", designation: "Professor", department: "CSE", college: "ABC Engineering" },
-  { id: 2, employeeId: "FAC002", name: "Prof. Meera Singh", designation: "Associate Professor", department: "ECE", college: "XYZ Technical" },
-];
-
 const Admin = () => {
-  const handleExport = (type: string, format: string) => {
-    // In a real application, this would trigger file download
-    console.log(`Exporting ${type} data in ${format} format`);
+  const [studentRegistrations, setStudentRegistrations] = useState([]);
+  const [facultyRegistrations, setFacultyRegistrations] = useState([]);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    totalFaculty: 0,
+    activePrograms: 0,
+    totalProjects: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Fetch students
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (studentsError) throw studentsError;
+
+      // Fetch faculty
+      const { data: faculty, error: facultyError } = await supabase
+        .from('faculty')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (facultyError) throw facultyError;
+
+      // Fetch programs count
+      const { count: programsCount, error: programsError } = await supabase
+        .from('programs')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'upcoming');
+
+      if (programsError) throw programsError;
+
+      // Fetch projects count
+      const { count: projectsCount, error: projectsError } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true });
+
+      if (projectsError) throw projectsError;
+
+      setStudentRegistrations(students || []);
+      setFacultyRegistrations(faculty || []);
+      setStats({
+        totalStudents: students?.length || 0,
+        totalFaculty: faculty?.length || 0,
+        activePrograms: programsCount || 0,
+        totalProjects: projectsCount || 0
+      });
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load admin data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleExport = (type: string, format: string) => {
+    const data = type === 'students' ? studentRegistrations : facultyRegistrations;
+    const csvContent = convertToCSV(data);
+    downloadFile(csvContent, `${type}_export.csv`, 'text/csv');
+  };
+
+  const convertToCSV = (data: any[]) => {
+    if (!data.length) return '';
+    
+    const headers = Object.keys(data[0]).join(',');
+    const rows = data.map(row => Object.values(row).join(','));
+    return [headers, ...rows].join('\n');
+  };
+
+  const downloadFile = (content: string, filename: string, contentType: string) => {
+    const blob = new Blob([content], { type: contentType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p className="text-muted-foreground">Loading admin data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -43,7 +131,7 @@ const Admin = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Students</p>
-                <p className="text-2xl font-bold text-foreground">{studentRegistrations.length}</p>
+                <p className="text-2xl font-bold text-foreground">{stats.totalStudents}</p>
               </div>
               <Users className="h-8 w-8 text-primary" />
             </div>
@@ -55,7 +143,7 @@ const Admin = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Faculty</p>
-                <p className="text-2xl font-bold text-foreground">{facultyRegistrations.length}</p>
+                <p className="text-2xl font-bold text-foreground">{stats.totalFaculty}</p>
               </div>
               <GraduationCap className="h-8 w-8 text-secondary" />
             </div>
@@ -67,7 +155,7 @@ const Admin = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Programs</p>
-                <p className="text-2xl font-bold text-foreground">5</p>
+                <p className="text-2xl font-bold text-foreground">{stats.activePrograms}</p>
               </div>
               <Calendar className="h-8 w-8 text-accent-foreground" />
             </div>
@@ -79,7 +167,7 @@ const Admin = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Projects</p>
-                <p className="text-2xl font-bold text-foreground">12</p>
+                <p className="text-2xl font-bold text-foreground">{stats.totalProjects}</p>
               </div>
               <BarChart3 className="h-8 w-8 text-destructive" />
             </div>
@@ -128,11 +216,11 @@ const Admin = () => {
                   <div key={student.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold">{student.name}</h3>
-                        <Badge variant="secondary">{student.usn}</Badge>
-                        <Badge variant="outline">{student.branch}</Badge>
+                        <h3 className="font-semibold">{student.full_name}</h3>
+                        <Badge variant="secondary">{student.qualification}</Badge>
+                        <Badge variant="outline">{student.course_applied}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{student.college}</p>
+                      <p className="text-sm text-muted-foreground">{student.address}</p>
                       <p className="text-sm text-muted-foreground">{student.email}</p>
                     </div>
                     <Button variant="outline" size="sm">
@@ -179,11 +267,11 @@ const Admin = () => {
                   <div key={faculty.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
-                        <h3 className="font-semibold">{faculty.name}</h3>
-                        <Badge variant="secondary">{faculty.employeeId}</Badge>
-                        <Badge variant="outline">{faculty.designation}</Badge>
+                        <h3 className="font-semibold">{faculty.full_name}</h3>
+                        <Badge variant="secondary">{faculty.experience_years}y exp</Badge>
+                        <Badge variant="outline">{faculty.qualification}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">{faculty.department} - {faculty.college}</p>
+                      <p className="text-sm text-muted-foreground">{faculty.specialization} - {faculty.address}</p>
                     </div>
                     <Button variant="outline" size="sm">
                       View Details

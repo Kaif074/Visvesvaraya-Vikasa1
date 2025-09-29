@@ -9,7 +9,7 @@ import vrifLogo from "@/assets/vrif-logo.jpg";
 import eraLogo from "@/assets/era-logo.jpg";
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, userProfile, signOut } = useAuth();
   const { toast } = useToast();
 
   const handleSignOut = async () => {
@@ -67,9 +67,14 @@ const Header = () => {
                 <>
                   <div className="px-2 py-2">
                     <p className="text-sm font-medium text-foreground">
-                      {user.user_metadata?.display_name || user.email}
+                      {userProfile?.full_name || user.user_metadata?.display_name || user.email}
                     </p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
+                    {userProfile && (
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {userProfile.type} Profile
+                      </p>
+                    )}
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">

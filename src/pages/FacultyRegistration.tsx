@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseHelpers } from "@/integrations/supabase/client";
 import { Users, BookOpen, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -26,7 +26,7 @@ const FacultyRegistration = () => {
   });
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUserProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -49,9 +49,7 @@ const FacultyRegistration = () => {
         ? parseInt(formData.experience.split('-')[1]) 
         : parseInt(formData.experience.replace('+', ''));
 
-      const { error } = await supabase
-        .from('faculty')
-        .insert([{
+      const { error } = await supabaseHelpers.createFaculty({
           user_id: user.id,
           full_name: formData.fullName,
           email: formData.email,
@@ -64,7 +62,7 @@ const FacultyRegistration = () => {
           experience_years: experienceYears || 0,
           previous_institution: formData.college,
           subjects_to_teach: [formData.department]
-        }]);
+      });
 
       if (error) {
         if (error.code === '23505') {
@@ -78,6 +76,7 @@ const FacultyRegistration = () => {
         }
       } else {
         setSuccess(true);
+        await refreshUserProfile(); // Refresh user profile after registration
         toast({
           title: "Registration Successful!",
           description: "Your faculty registration has been submitted successfully.",

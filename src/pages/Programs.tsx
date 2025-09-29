@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Users, ExternalLink } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseHelpers } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,7 +24,7 @@ const Programs = () => {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -33,11 +33,7 @@ const Programs = () => {
 
   const fetchPrograms = async () => {
     try {
-      const { data, error } = await supabase
-        .from('programs')
-        .select('*')
-        .order('program_date', { ascending: true });
-
+      const { data, error } = await supabaseHelpers.getAllPrograms();
       if (error) throw error;
       setPrograms(data || []);
     } catch (error) {
@@ -65,20 +61,11 @@ const Programs = () => {
     setRegistering(programId);
     
     try {
-      // First check if user has a student record
-      const { data: studentData } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      const { error } = await supabase
-        .from('program_registrations')
-        .insert([{
-          program_id: programId,
-          user_id: user.id,
-          student_id: studentData?.id || null
-        }]);
+      const { error } = await supabaseHelpers.registerForProgram(
+        programId, 
+        user.id, 
+        userProfile?.type === 'student' ? userProfile.id : undefined
+      );
 
       if (error) {
         if (error.code === '23505') {
@@ -95,15 +82,6 @@ const Programs = () => {
           title: "Registration Successful!",
           description: "You have been registered for the program.",
         });
-        
-        // Update the registered count
-        await supabase
-          .from('programs')
-          .update({ 
-            registered_count: programs.find(p => p.id === programId)!.registered_count + 1 
-          })
-          .eq('id', programId);
-        
         fetchPrograms(); // Refresh the data
       }
     } catch (error) {

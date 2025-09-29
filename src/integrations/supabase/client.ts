@@ -10,8 +10,72 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   }
 });
+
+// Helper functions for common database operations
+export const supabaseHelpers = {
+  // Student operations
+  async createStudent(studentData: any) {
+    return await supabase.from('students').insert([studentData]).select().single();
+  },
+  
+  async getStudentByUserId(userId: string) {
+    return await supabase.from('students').select('*').eq('user_id', userId).single();
+  },
+  
+  // Faculty operations
+  async createFaculty(facultyData: any) {
+    return await supabase.from('faculty').insert([facultyData]).select().single();
+  },
+  
+  async getFacultyByUserId(userId: string) {
+    return await supabase.from('faculty').select('*').eq('user_id', userId).single();
+  },
+  
+  // Program operations
+  async getAllPrograms() {
+    return await supabase.from('programs').select('*').order('program_date', { ascending: true });
+  },
+  
+  async registerForProgram(programId: string, userId: string, studentId?: string) {
+    return await supabase.from('program_registrations').insert([{
+      program_id: programId,
+      user_id: userId,
+      student_id: studentId || null
+    }]);
+  },
+  
+  // Activity operations
+  async getAllActivities() {
+    return await supabase.from('activities').select('*').order('activity_date', { ascending: false });
+  },
+  
+  async registerForActivity(activityId: string, userId: string, studentId?: string) {
+    return await supabase.from('activity_registrations').insert([{
+      activity_id: activityId,
+      user_id: userId,
+      student_id: studentId || null
+    }]);
+  },
+  
+  // Project operations
+  async getAllProjects() {
+    return await supabase.from('projects').select(`
+      *,
+      students!projects_student_id_fkey (
+        full_name,
+        qualification,
+        address
+      )
+    `).order('created_at', { ascending: false });
+  },
+  
+  async createProject(projectData: any) {
+    return await supabase.from('projects').insert([projectData]).select().single();
+  }
+};

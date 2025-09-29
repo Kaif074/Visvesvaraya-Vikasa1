@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseHelpers } from "@/integrations/supabase/client";
 import { Upload, Activity, Calendar, Users, FileText } from "lucide-react";
 
 interface ActivityType {
@@ -42,7 +42,7 @@ const Activities = () => {
   });
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   useEffect(() => {
     fetchActivities();
@@ -50,11 +50,7 @@ const Activities = () => {
 
   const fetchActivities = async () => {
     try {
-      const { data, error } = await supabase
-        .from('activities')
-        .select('*')
-        .order('activity_date', { ascending: false });
-
+      const { data, error } = await supabaseHelpers.getAllActivities();
       if (error) throw error;
       setActivities(data || []);
     } catch (error) {
@@ -82,19 +78,11 @@ const Activities = () => {
     setRegistering(activityId);
     
     try {
-      const { data: studentData } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      const { error } = await supabase
-        .from('activity_registrations')
-        .insert([{
-          activity_id: activityId,
-          user_id: user.id,
-          student_id: studentData?.id || null
-        }]);
+      const { error } = await supabaseHelpers.registerForActivity(
+        activityId, 
+        user.id, 
+        userProfile?.type === 'student' ? userProfile.id : undefined
+      );
 
       if (error) {
         if (error.code === '23505') {

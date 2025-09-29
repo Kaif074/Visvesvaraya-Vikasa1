@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseHelpers } from "@/integrations/supabase/client";
 import { UserPlus, GraduationCap, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -24,7 +24,7 @@ const StudentRegistration = () => {
   });
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUserProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -43,9 +43,7 @@ const StudentRegistration = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase
-        .from('students')
-        .insert([{
+      const { error } = await supabaseHelpers.createStudent({
           user_id: user.id,
           full_name: formData.fullName,
           email: formData.email,
@@ -57,7 +55,7 @@ const StudentRegistration = () => {
           course_applied: `${formData.branch} - Semester ${formData.semester}`,
           emergency_contact_name: 'Not provided',
           emergency_contact_number: 'Not provided'
-        }]);
+      });
 
       if (error) {
         if (error.code === '23505') {
@@ -71,6 +69,7 @@ const StudentRegistration = () => {
         }
       } else {
         setSuccess(true);
+        await refreshUserProfile(); // Refresh user profile after registration
         toast({
           title: "Registration Successful!",
           description: "Your student registration has been submitted successfully.",

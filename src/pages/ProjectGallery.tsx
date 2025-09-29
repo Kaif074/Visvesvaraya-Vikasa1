@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabaseHelpers } from "@/integrations/supabase/client";
 import { Upload, FileImage, Eye, ExternalLink, Calendar, User } from "lucide-react";
 
 interface Project {
@@ -49,7 +49,7 @@ const ProjectGallery = () => {
   });
 
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   useEffect(() => {
     fetchProjects();
@@ -57,17 +57,7 @@ const ProjectGallery = () => {
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          students!projects_student_id_fkey (
-            full_name,
-            qualification,
-            address
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabaseHelpers.getAllProjects();
 
       if (error) throw error;
       
@@ -105,24 +95,15 @@ const ProjectGallery = () => {
     }
 
     try {
-      // First check if user has a student record
-      const { data: studentData } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      const { error } = await supabase
-        .from('projects')
-        .insert([{
+      const { error } = await supabaseHelpers.createProject({
           title: formData.title,
           description: formData.description,
-          student_id: studentData?.id || null,
+          student_id: userProfile?.type === 'student' ? userProfile.id : null,
           project_url: formData.projectUrl || null,
           status: 'ongoing',
           start_date: new Date().toISOString().split('T')[0],
           tags: formData.technologies ? formData.technologies.split(',').map(t => t.trim()) : []
-        }]);
+      });
 
       if (error) throw error;
 
